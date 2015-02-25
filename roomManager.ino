@@ -24,11 +24,13 @@ int motionPin = 1;
 
 int contactronPin = 2;
 
+int fotoPin = 0;
+
 byte sensorAddress[8] = { 0x28, 0xC, 0x9E, 0xBF, 0x6, 0x0, 0x0, 0xAC };
 
 static byte mymac[] = { 0x74, 0x69, 0x69, 0x2D, 0x30, 0x31 };
-static byte hisip[] = { 192, 168, 1, 101 }; // remote webserver
-const char website[] PROGMEM = "192.168.1.101";
+static byte hisip[] = { 192, 168, 1, 111 }; // remote webserver
+const char website[] PROGMEM = "192.168.1.111";
 // === end config ===============================
 
 bool light1 = false;
@@ -45,20 +47,21 @@ OneWire onewire(sensorpin);
 DS18B20 sensors(&onewire);
 
 unsigned long tempReadedTime = 0;
+unsigned long fotoReadedTime = 0;
 
 bool isDhcp = false;
 byte Ethernet::buffer[500];
 const char pageOk[] PROGMEM =
 "HTTP/1.0 200 OK\r\n"
 "Pragma: no-cache\r\n"
-"Access-Control-Allow-Origin: http://192.168.1.101\r\n"
+"Access-Control-Allow-Origin: http://192.168.1.111\r\n"
 "\r\n"
 "OK"
 ;
 const char pageNotOk[] PROGMEM =
 "HTTP/1.0 501 Not Implemented\r\n"
 "Pragma: no-cache\r\n"
-"Access-Control-Allow-Origin: http://192.168.1.101\r\n"
+"Access-Control-Allow-Origin: http://192.168.1.111\r\n"
 "\r\n"
 "NOT OK"
 ;
@@ -104,6 +107,12 @@ void setup() {
 	}
 
 	irrecv.enableIRIn();
+
+	sendToMaster("light1", 0);
+	sendToMaster("light2", 0);
+
+	sendToMaster("output1", 0);
+	sendToMaster("output2", 0);
 }
 
 void loop() {
@@ -163,7 +172,7 @@ void loop() {
 	}
 
 	// === czujnik temp =====================
-	if (millis() - tempReadedTime > 600000) {
+	if (millis() - tempReadedTime >= 3600000) {
 		readTemp();
 		tempReadedTime = millis();
 	}
@@ -213,17 +222,25 @@ void loop() {
 #endif
 		sendToMaster("window", 1);
 	}
+	// === end kontaktron ====================
+
+	// === fotoRezystor ======================
+
+	if (millis() - fotoReadedTime >= 300000) {
+		sendToMaster("light1", analogRead(fotoPin));
+		fotoReadedTime = millis();
+	}
 
 }
 
 void toggleLight1() {
 	light1 = !light1;
-	switchOutput("light1", (float)light1);
+	switchOutput("light1", (float) light1);
 }
 
 void toggleLight2() {
 	light2 = !light2;
-	switchOutput("light2", (float)light2);
+	switchOutput("light2", (float) light2);
 	delay(20);
 }
 
@@ -269,7 +286,7 @@ void switchOutput(String type, float value) {
 			sendToMaster("outlet2", 0);
 		}
 	}
-	
+
 	delay(20);
 }
 
