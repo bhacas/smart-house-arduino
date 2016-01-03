@@ -33,6 +33,8 @@ static byte hisip[] = { 192, 168, 1, 111 }; // remote webserver
 const char website[] PROGMEM = "192.168.1.111";
 // === end config ===============================
 
+bool initiated = false;
+
 bool light1 = false;
 bool light2 = false;
 
@@ -46,8 +48,8 @@ bool switch2pressed = false;
 OneWire onewire(sensorpin);
 DS18B20 sensors(&onewire);
 
-unsigned long tempReadedTime = 0;
-unsigned long fotoReadedTime = 0;
+unsigned long tempReadedTime = 900000;
+unsigned long fotoReadedTime = 900000;
 
 bool isDhcp = false;
 byte Ethernet::buffer[500];
@@ -69,7 +71,7 @@ const char pageNotOk[] PROGMEM =
 IRrecv irrecv(irPin);
 decode_results results;
 
-unsigned long motionReadedTime = 0;
+unsigned long motionReadedTime = 300000;
 
 bool contactronOpened = true;
 
@@ -107,12 +109,6 @@ void setup() {
 	}
 
 	irrecv.enableIRIn();
-
-	sendToMaster("light1", 0);
-	sendToMaster("light2", 0);
-
-	sendToMaster("output1", 0);
-	sendToMaster("output2", 0);
 }
 
 void loop() {
@@ -150,6 +146,24 @@ void loop() {
 		}
 	}
 
+	if (initiated == false) {
+		sendToMaster("light1", 0);
+		sendToMaster("light2", 0);
+		sendToMaster("output1", 0);
+		sendToMaster("output2", 0);
+		sendToMaster("output2", 0);
+		if (digitalRead(contactronPin) == LOW) {
+			contactronOpened = true;
+			sendToMaster("window", 0);
+		} else {
+			contactronOpened = false;
+		    sendToMaster("window", 1);
+		}
+		
+		
+		initiated = true;
+	}
+
 	//light1 = true;
 	//digitalWrite(light1pin, HIGH);
 
@@ -172,7 +186,7 @@ void loop() {
 	}
 
 	// === czujnik temp =====================
-	if (millis() - tempReadedTime >= 3600000) {
+	if (millis() - tempReadedTime >= 900000) {
 		readTemp();
 		tempReadedTime = millis();
 	}
@@ -200,7 +214,7 @@ void loop() {
 
 	// == czujnik ruchu =====================
 	if (digitalRead(motionPin) == HIGH
-			&& millis() - motionReadedTime > 300000) {
+			&& millis() - motionReadedTime >= 300000) {
 #if SERIAL
 		Serial.println("Wykryto ruch");
 #endif
@@ -226,8 +240,8 @@ void loop() {
 
 	// === fotoRezystor ======================
 
-	if (millis() - fotoReadedTime >= 300000) {
-		sendToMaster("light1", analogRead(fotoPin));
+	if (millis() - fotoReadedTime >= 900000) {
+		sendToMaster("foto", analogRead(fotoPin));
 		fotoReadedTime = millis();
 	}
 
